@@ -12,20 +12,18 @@ var express = require('express')
   , FacebookStrategy = require('passport-facebook').Strategy
   , path = require('path');
 
+var User = require('./models/user.js');
 var secret = require('./PRIVATE');
-console.log(secret);
 var app = express();
+console.log(User);
 
 mongoose.connect('mongodb://localhost/test');
 
 var db = mongoose.connection;
-db.on('error', console.error.bind(console, 'connection error:'));
-db.once('open', function callback () {
-  var userSchema = mongoose.Schema({
-        name: String
-  });
-  var User = mongoose.model('User', userSchema);
-});
+//db.on('error', console.error.bind(console, 'connection error:'));
+/*db.once('open', function callback () {
+    console.log('Db opened');
+});*/
 
 
 passport.use(new FacebookStrategy({
@@ -34,11 +32,12 @@ passport.use(new FacebookStrategy({
       callbackURL: "http://padapt.com/auth/facebook/callback"
     },
       function(accessToken, refreshToken, profile, done) {
-            User.findOrCreate(function(err, user) {
+           var newUser = new User();
+            newUser.findOrCreate(accessToken, refreshToken, profile, function(err, user) {
                     if (err) { return done(err); }
-                          done(null, user);
-                              });
-              }
+                     done(null, user);
+                     });
+      }
 ));
 
 // all environments
@@ -49,6 +48,9 @@ app.use(express.favicon());
 app.use(express.logger('dev'));
 app.use(express.bodyParser());
 app.use(express.methodOverride());
+app.use(express.session({ secret: 'keyboard cat' })); //hackathons are made for useless keys
+app.use(passport.initialize());
+app.use(passport.session());
 app.use(app.router);
 app.use(express.static(path.join(__dirname, 'public')));
 
